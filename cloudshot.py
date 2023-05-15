@@ -1,7 +1,9 @@
 import argparse
 import sys
+import os
 from io import BytesIO
 import datetime
+import subprocess
 
 # GUI related imports
 from PyQt5 import QtCore, QtGui, QtWidgets
@@ -33,24 +35,61 @@ class Snipper(QtWidgets.QWidget):
         # Initialize start and end points for the screenshot rectangle
         self.start, self.end = QtCore.QPoint(), QtCore.QPoint()
 
+        # Drawing mode attribute
+        self.drawing = False
+
+        # List to store the points of the drawing
+        self.drawing_points = []
+        
     def getWindow(self):
         # Get a screenshot of the whole screen
         return self._screen.grabWindow(0)
 
     def keyPressEvent(self, event):
+        # If Ctrl+F is pressed, upload the screenshot to the server
+        if event.key() == Qt.Key_F and event.modifiers() == Qt.ControlModifier:
+            self.send_screenshot()
+            QtWidgets.QApplication.quit()
         # If Ctrl+C is pressed, take the screenshot and put it into the clipboard
-        if event.key() == Qt.Key_C and event.modifiers() == Qt.ControlModifier:
+        elif event.key() == Qt.Key_C and event.modifiers() == Qt.ControlModifier:
             self.take_screenshot()
             QtWidgets.QApplication.quit()
         # If Ctrl+S is pressed, save the screenshot to a file
         elif event.key() == Qt.Key_S and event.modifiers() == Qt.ControlModifier:
             self.save_screenshot()
             QtWidgets.QApplication.quit()
+        # If Ctrl+D is pressed, Start/stop drawing
+        elif event.key() == Qt.Key_D and event.modifiers() == Qt.ControlModifier:
+            self.drawing = not self.drawing
+            # If drawing is started, add an empty list to store the points
+            if self.drawing:
+                self.drawing_points.append([])
+            else:
+                # If drawing is stopped, add an empty list to separate lines
+                self.drawing_points.append([])
         # If the escape key is pressed, quit the application
         elif event.key() == Qt.Key_Escape:
             QtWidgets.QApplication.quit()
 
         return super().keyPressEvent(event)
+
+    def send_screenshot(self):
+        # Get the screenshot
+        screenshot = self.get_screenshot()
+        
+        # Save the screenshot to a temporary file
+        filename = "cloudshot_" + datetime.datetime.now().strftime("(%d-%m-%Y_at_%H.%M)")
+        screenshot.save(filename, "PNG")
+        
+        # Add the filename to the SCP command
+        SCP_COMMAND = os.getenv("SCP")
+        scp_command = SCP_COMMAND.replace("image", filename)
+        
+        # Execute the SCP command
+        subprocess.run(scp_command, shell=True)
+
+        # Delete the temporary file
+        os.remove(filename)
 
     def paintEvent(self, event):
         painter = QtGui.QPainter(self)
@@ -69,27 +108,50 @@ class Snipper(QtWidgets.QWidget):
         painter.setBrush(painter.background())
         painter.drawRect(QtCore.QRect(self.start, self.end))
 
+        # Draw the lines for the annotations
+        if self.drawing_points:
+            painter.setPen(QtGui.QPen(QtGui.QColor(255, 0, 0), 3))  # Red color
+            for points in self.drawing_points:
+                if points:
+                    for i in range(len(points) - 1):
+                        painter.drawLine(points[i], points[i+1])
+
         return super().paintEvent(event)
 
     def mousePressEvent(self, event):
-        # When the mouse button is pressed, save the current cursor position
-        # and update the display
-        self.start = self.end = event.pos()
-        self.update()
+        # Add a condition to handle drawing
+        if self.drawing:
+            self.drawing_points[-1].append(event.pos())
+            self.update()
+        else:
+            # When the mouse button is pressed, save the current cursor position
+            # and update the display
+            self.start = self.end = event.pos()
+            self.update()
 
         return super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
-        # When the mouse is moving, update the end point and the display
-        self.end = event.pos()
-        self.update()
+        # Add a condition to handle drawing
+        if self.drawing:
+            self.drawing_points[-1].append(event.pos())
+            self.update()
+        else:
+            # When the mouse is moving, update the end point and the display
+            self.end = event.pos()
+            self.update()
 
         return super().mouseMoveEvent(event)
 
+
     def mouseReleaseEvent(self, event):
-        # When the mouse button is released, just update the end point
-        self.end = event.pos()
-        self.update()
+        # If in drawing mode, add an empty list to separate lines
+        if self.drawing:
+            self.drawing_points.append([])
+        else:
+            # If not in drawing mode, update the end point
+            self.end = event.pos()
+            self.update()
 
         return super().mouseReleaseEvent(event)
 
@@ -126,7 +188,7 @@ class Snipper(QtWidgets.QWidget):
         
         # Ask the user for a filename
         filename, _ = QtWidgets.QFileDialog.getSaveFileName(
-            self, "Save Screenshot", "cloudshot_" + datetime.datetime.now().strftime("%d-%m-%Y_%H:%M:%S"), "PNG files (*.png);;All Files (*)"
+            self, "Save Screenshot", "cloudshot_" + datetime.datetime.now().strftime("(%d-%m-%Y_at_%H.%M)"), "PNG files (*.png);;All Files (*)"
         )
         if filename:
             # Save the screenshot to the file
