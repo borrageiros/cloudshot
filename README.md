@@ -1,6 +1,6 @@
 # CloudShot
 
-CloudShot is a nimble and efficient script engineered for capturing and handling screenshots with ease.
+CloudShot is a nimble and efficient script engineered for Windows, designed for capturing and handling screenshots with ease.
 
 This tool empowers you to select a specific section of your screen, perform quick edits, and then offers you the following possibilities:
 
