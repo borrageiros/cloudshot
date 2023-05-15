@@ -1,6 +1,7 @@
 import argparse
 import sys
 from io import BytesIO
+import datetime
 
 # GUI related imports
 from PyQt5 import QtCore, QtGui, QtWidgets
@@ -37,8 +38,16 @@ class Snipper(QtWidgets.QWidget):
         return self._screen.grabWindow(0)
 
     def keyPressEvent(self, event):
+        # If Ctrl+C is pressed, take the screenshot and put it into the clipboard
+        if event.key() == Qt.Key_C and event.modifiers() == Qt.ControlModifier:
+            self.take_screenshot()
+            QtWidgets.QApplication.quit()
+        # If Ctrl+S is pressed, save the screenshot to a file
+        elif event.key() == Qt.Key_S and event.modifiers() == Qt.ControlModifier:
+            self.save_screenshot()
+            QtWidgets.QApplication.quit()
         # If the escape key is pressed, quit the application
-        if event.key() == Qt.Key_Escape:
+        elif event.key() == Qt.Key_Escape:
             QtWidgets.QApplication.quit()
 
         return super().keyPressEvent(event)
@@ -78,17 +87,15 @@ class Snipper(QtWidgets.QWidget):
         return super().mouseMoveEvent(event)
 
     def mouseReleaseEvent(self, event):
-        # When the mouse button is released, hide the widget, get the screenshot
-        # and put it into the clipboard
-        self.hide()
+        # When the mouse button is released, just update the end point
+        self.end = event.pos()
+        self.update()
 
-        screenshot = self.getWindow().copy(
-            min(self.start.x(), self.end.x()),
-            min(self.start.y(), self.end.y()),
-            abs(self.start.x() - self.end.x()),
-            abs(self.start.y() - self.end.y()),
-        )
+        return super().mouseReleaseEvent(event)
 
+    def take_screenshot(self):
+        # Get the screenshot and put it into the clipboard
+        screenshot = self.get_screenshot()
         # Convert the screenshot to a QImage
         qimg = screenshot.toImage()
 
@@ -113,7 +120,25 @@ class Snipper(QtWidgets.QWidget):
         # Send the image data to the clipboard
         send_to_clipboard(win32clipboard.CF_DIB, data)
 
-        QtWidgets.QApplication.quit()
+    def save_screenshot(self):
+        # Get the screenshot
+        screenshot = self.get_screenshot()
+        
+        # Ask the user for a filename
+        filename, _ = QtWidgets.QFileDialog.getSaveFileName(
+            self, "Save Screenshot", "cloudshot_" + datetime.datetime.now().strftime("%d-%m-%Y_%H:%M:%S"), "PNG files (*.png);;All Files (*)"
+        )
+        if filename:
+            # Save the screenshot to the file
+            screenshot.save(filename, "PNG")
+
+    def get_screenshot(self):
+        return self.getWindow().copy(
+            min(self.start.x(), self.end.x()) + 2,
+            min(self.start.y(), self.end.y()) + 2,
+            abs(self.start.x() - self.end.x()) - 2,
+            abs(self.start.y() - self.end.y()) - 2,
+        )
 
 def send_to_clipboard(clip_type, data):
     # Open the clipboard, clear it, then set the clipboard data
@@ -148,4 +173,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

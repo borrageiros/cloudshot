@@ -1,4 +1,4 @@
-# CloudShot
+# CloudShot (work in progress)
 
 CloudShot is a nimble and efficient script engineered for Windows, designed for capturing and handling screenshots with ease.
 
