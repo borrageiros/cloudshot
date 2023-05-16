@@ -4,6 +4,7 @@ import os
 from io import BytesIO
 import datetime
 import subprocess
+import pytesseract
 
 # GUI related imports
 from PyQt5 import QtCore, QtGui, QtWidgets
@@ -14,6 +15,7 @@ import win32clipboard
 from PIL import Image
 
 class Snipper(QtWidgets.QWidget):
+
     def __init__(self, parent=None, flags=Qt.WindowFlags()):
         super().__init__(parent=parent, flags=flags)
 
@@ -40,24 +42,26 @@ class Snipper(QtWidgets.QWidget):
 
         # List to store the points of the drawing
         self.drawing_points = []
-        
+
+
+
     def getWindow(self):
         # Get a screenshot of the whole screen
         return self._screen.grabWindow(0)
 
+
+
     def keyPressEvent(self, event):
-        # If Ctrl+F is pressed, upload the screenshot to the server
-        if event.key() == Qt.Key_F and event.modifiers() == Qt.ControlModifier:
-            self.send_screenshot()
+        # If Ctrl+A is pressed, take the screenshot and convert it to text using Tesseract OCR
+        if event.key() == Qt.Key_A and event.modifiers() == Qt.ControlModifier:
+            self.take_screenshot_and_convert_to_text()
             QtWidgets.QApplication.quit()
-        # If Ctrl+C is pressed, take the screenshot and put it into the clipboard
-        elif event.key() == Qt.Key_C and event.modifiers() == Qt.ControlModifier:
-            self.take_screenshot()
-            QtWidgets.QApplication.quit()
+
         # If Ctrl+S is pressed, save the screenshot to a file
         elif event.key() == Qt.Key_S and event.modifiers() == Qt.ControlModifier:
             self.save_screenshot()
             QtWidgets.QApplication.quit()
+
         # If Ctrl+D is pressed, Start/stop drawing
         elif event.key() == Qt.Key_D and event.modifiers() == Qt.ControlModifier:
             self.drawing = not self.drawing
@@ -67,11 +71,26 @@ class Snipper(QtWidgets.QWidget):
             else:
                 # If drawing is stopped, add an empty list to separate lines
                 self.drawing_points.append([])
+
+        # If Ctrl+F is pressed, upload the screenshot to the server
+        elif event.key() == Qt.Key_F and event.modifiers() == Qt.ControlModifier:
+            self.send_screenshot()
+            QtWidgets.QApplication.quit()
+
+        # If Ctrl+C is pressed, take the screenshot and put it into the clipboard
+        elif event.key() == Qt.Key_C and event.modifiers() == Qt.ControlModifier:
+            self.take_screenshot()
+            QtWidgets.QApplication.quit()
+
+
+
         # If the escape key is pressed, quit the application
         elif event.key() == Qt.Key_Escape:
             QtWidgets.QApplication.quit()
 
         return super().keyPressEvent(event)
+
+
 
     def send_screenshot(self):
         # Get the screenshot
@@ -93,6 +112,8 @@ class Snipper(QtWidgets.QWidget):
 
         # Copy the filename to the clipboard
         send_to_clipboard(win32clipboard.CF_UNICODETEXT, os.getenv("IMAGE_SERVER_URL")+filename)
+
+
 
     def paintEvent(self, event):
         painter = QtGui.QPainter(self)
@@ -121,6 +142,8 @@ class Snipper(QtWidgets.QWidget):
 
         return super().paintEvent(event)
 
+
+
     def mousePressEvent(self, event):
         # Add a condition to handle drawing
         if self.drawing:
@@ -133,6 +156,8 @@ class Snipper(QtWidgets.QWidget):
             self.update()
 
         return super().mousePressEvent(event)
+
+
 
     def mouseMoveEvent(self, event):
         # Add a condition to handle drawing
@@ -147,6 +172,7 @@ class Snipper(QtWidgets.QWidget):
         return super().mouseMoveEvent(event)
 
 
+
     def mouseReleaseEvent(self, event):
         # If in drawing mode, add an empty list to separate lines
         if self.drawing:
@@ -157,6 +183,8 @@ class Snipper(QtWidgets.QWidget):
             self.update()
 
         return super().mouseReleaseEvent(event)
+
+
 
     def take_screenshot(self):
         # Get the screenshot and put it into the clipboard
@@ -185,6 +213,8 @@ class Snipper(QtWidgets.QWidget):
         # Send the image data to the clipboard
         send_to_clipboard(win32clipboard.CF_DIB, data)
 
+
+
     def save_screenshot(self):
         # Get the screenshot
         screenshot = self.get_screenshot()
@@ -197,6 +227,8 @@ class Snipper(QtWidgets.QWidget):
             # Save the screenshot to the file
             screenshot.save(filename, "PNG")
 
+
+
     def get_screenshot(self):
         return self.getWindow().copy(
             min(self.start.x(), self.end.x()) + 2,
@@ -205,6 +237,35 @@ class Snipper(QtWidgets.QWidget):
             abs(self.start.y() - self.end.y()) - 2,
         )
 
+
+
+    def take_screenshot_and_convert_to_text(self):
+        # Get the screenshot and convert it to a PIL Image
+        screenshot = self.get_screenshot()
+        
+        # Convert the screenshot to a QImage
+        qimg = screenshot.toImage()
+
+        # Save the QImage to a buffer, then create a PIL image from the buffer
+        buffer = QtCore.QBuffer()
+        buffer.open(QtCore.QIODevice.ReadWrite)
+        qimg.save(buffer, "PNG")
+
+        # Create a BytesIO object and write the buffer data to it
+        strio = BytesIO()
+        strio.write(buffer.data())
+        buffer.close()
+        strio.seek(0)
+        img = Image.open(strio)
+
+        # Use Tesseract to convert the image to text
+        text = pytesseract.image_to_string(img)
+
+        # Send the text to the clipboard
+        send_to_clipboard(win32clipboard.CF_UNICODETEXT, text)
+
+
+
 def send_to_clipboard(clip_type, data):
     # Open the clipboard, clear it, then set the clipboard data
     win32clipboard.OpenClipboard()
@@ -212,7 +273,7 @@ def send_to_clipboard(clip_type, data):
     win32clipboard.SetClipboardData(clip_type, data)
     win32clipboard.CloseClipboard()
 
-arg_parser = argparse.ArgumentParser(description=__doc__)
+
 
 def take_screenshot():
     # Disable High DPI scaling
@@ -229,6 +290,9 @@ def take_screenshot():
     # Enter the application main loop
     sys.exit(app.exec_())
 
+
+
+arg_parser = argparse.ArgumentParser(description=__doc__)
 def main():
     # Parse the command line arguments
     args = arg_parser.parse_args()
