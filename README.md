@@ -47,10 +47,10 @@ SCP=
 IMAGE_SERVER_URL=
 ```
 ##### Required:
-ACTIVATE_KEY - The key or key combination to take a screenshot. Once the screenshot is taken, you have access to options like cropping, editing, saving, and copying the screenshot, examples:
-✅ctrl+p
-✅ins
-✅F8
+ACTIVATE_KEY - The key or key combination to take a screenshot. Once the screenshot is taken, you have access to options like cropping, editing, saving, and copying the screenshot, examples:  
+✅ctrl+p  
+✅ins  
+✅F8  
 
 ALERT - Enable or disable notifications. It can be set to "true" or "false".
 
@@ -59,15 +59,15 @@ SERVER - Enable or disable uploading to a private server (Ctrl+F). It can be set
 TESSERACT - Enable or disable text detection (Ctrl+A). It can be set to "on" or any other value for disable it.
 
 ##### Server (if the "SERVER" key is set to "on"):
-SCP - The command for file upload, using the word "image" instead the file. Examples:
-✅scp image user@cloudshot.com:/var/www/screenshots
-❌scp picture user@cloudshot.com:/var/www/screenshots
-✅scp image user@192.168.1.1:/home/user
-❌scp any user@192.168.1.1:/home/user
+SCP - The command for file upload, using the word "image" instead the file. Examples:  
+✅scp image user@cloudshot.com:/var/www/screenshots  
+❌scp picture user@cloudshot.com:/var/www/screenshots  
+✅scp image user@192.168.1.1:/home/user  
+❌scp any user@192.168.1.1:/home/user  
 
-IMAGE_SERVER_URL - The URL where the images will be uploaded (with a "/" at the end). Examples:
-✅https://cloudshot.com/screenshots/
-❌https://cloudshot.com/screenshots
+IMAGE_SERVER_URL - The URL where the images will be uploaded (with a "/" at the end). Examples:  
+✅https://cloudshot.com/screenshots/  
+❌https://cloudshot.com/screenshots  
 
 You can configure an Apache2/Nginx server on your system to provide immediate access to the uploaded screenshots.
 
