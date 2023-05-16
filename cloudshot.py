@@ -78,7 +78,7 @@ class Snipper(QtWidgets.QWidget):
         screenshot = self.get_screenshot()
         
         # Save the screenshot to a temporary file
-        filename = "cloudshot_" + datetime.datetime.now().strftime("(%d-%m-%Y_at_%H.%M)")
+        filename = "cloudshot_" + datetime.datetime.now().strftime("(%d.%m.%Y_at_%H.%M)")
         screenshot.save(filename, "PNG")
         
         # Add the filename to the SCP command
@@ -90,6 +90,9 @@ class Snipper(QtWidgets.QWidget):
 
         # Delete the temporary file
         os.remove(filename)
+
+        # Copy the filename to the clipboard
+        send_to_clipboard(win32clipboard.CF_UNICODETEXT, os.getenv("IMAGE_SERVER_URL")+filename)
 
     def paintEvent(self, event):
         painter = QtGui.QPainter(self)
@@ -188,7 +191,7 @@ class Snipper(QtWidgets.QWidget):
         
         # Ask the user for a filename
         filename, _ = QtWidgets.QFileDialog.getSaveFileName(
-            self, "Save Screenshot", "cloudshot_" + datetime.datetime.now().strftime("(%d-%m-%Y_at_%H.%M)"), "PNG files (*.png);;All Files (*)"
+            self, "Save Screenshot", "cloudshot_" + datetime.datetime.now().strftime("(%d.%m.%Y_at_%H.%M)"), "PNG files (*.png);;All Files (*)"
         )
         if filename:
             # Save the screenshot to the file
